@@ -1,0 +1,94 @@
+import rospy
+from clover import srv
+from std_srvs.srv import Trigger
+import numpy as np
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import random
+from led_msgs.srv import SetLEDs
+from led_msgs.msg import LEDStateArray, LEDState
+from clover.srv import SetLEDEffect
+
+rospy.init_node('flight')
+bridge = CvBridge()
+
+get_telemetry = rospy.ServiceProxy('get_telemetry', srv.GetTelemetry)
+navigate = rospy.ServiceProxy('navigate', srv.Navigate)
+navigate_global = rospy.ServiceProxy('navigate_global', srv.NavigateGlobal)
+set_position = rospy.ServiceProxy('set_position', srv.SetPosition)
+set_velocity = rospy.ServiceProxy('set_velocity', srv.SetVelocity)
+set_attitude = rospy.ServiceProxy('set_attitude', srv.SetAttitude)
+set_rates = rospy.ServiceProxy('set_rates', srv.SetRates)
+land = rospy.ServiceProxy('land', Trigger)
+set_leds = rospy.ServiceProxy('led/set_leds', SetLEDs)  # define proxy to ROS service
+set_effect = rospy.ServiceProxy('led/set_effect', SetLEDEffect)  # define proxy to ROS-service
+
+dict_flag, i, detect_flag = [], -1, True
+Led = { "red": [255, 0, 0], "blue": [0, 0, 255], "green": [0, 255, 0], "yellow": [255, 255, 0], "black": [0, 0, 0], "white": [255, 255, 255] }
+count_led = 58
+Lenta = [0]*count_led
+
+def Lenta_print():
+    global count_led, Lenta
+    set_effect(r=0, g=0, b=0)  # fill strip with red color
+    rospy.sleep(4)
+    a = []
+    for i in range(count_led):
+        a.append(LEDState(i, Led[Lenta[i][0]][0], Led[Lenta[i][0]][1], Led[Lenta[i][0]][2]))
+    set_leds(a)
+
+def flag_det():
+    global dict_flag, i, detect_flag, count_led, Lenta
+    imgg = bridge.imgmsg_to_cv2(rospy.wait_for_message('main_camera/image_raw', Image), 'bgr8')
+    if detect_flag:
+        dict_flag.append([[0,0,0], [0,0,0], [0,0,0], [0,0,0], [0,0,0], [0,0,0]])
+        detect_flag = False
+        i+=1
+        #rospy.sleep(1)
+
+    img = cv2.cvtColor(imgg, cv2.COLOR_BGR2HSV)
+    # Detect Red
+    frame = cv2.inRange(img, (0, 89, 217), (22, 255, 255))
+    cnt = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    try: 
+        for c in cnt:
+            moments = cv2.moments(c, 1)       
+            sum_pixel = moments['m00']
+            if sum_pixel > 100:
+                dict_flag[i][0] = [sum_pixel, int(moments['m10'] / sum_pixel), int(moments['m01'] / sum_pixel)]
+                detect_flag = True
+                cv2.drawContours(imgg, [c], 0, (255,255,255), 2)
+                cv2.putText(imgg, '*', (int(moments['m10'] / sum_pixel), int(moments['m01'] / sum_pixel)), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    except:
+        pass
+
+    # Detect Blue
+    frame = cv2.inRange(img, (77, 149, 68), (123, 255, 187))
+    cnt = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    try: 
+        for c in cnt:
+            moments = cv2.moments(c, 1)       
+            sum_pixel = moments['m00']
+            if sum_pixel > 100:
+                dict_flag[i][1] = [sum_pixel, int(moments['m10'] / sum_pixel), int(moments['m01'] / sum_pixel)]
+                detect_flag = True
+                cv2.drawContours(imgg, [c], 0, (255,255,255), 2)
+                cv2.putText(imgg, '*', (int(moments['m10'] / sum_pixel), int(moments['m01'] / sum_pixel)), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    except:
+        pass
+    
+    # Detect Black
+    frame = cv2.inRange(img, (0, 0, 0), (100, 100, 100))
+    cnt = cv2.findContours(frame, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0]
+    try: 
+        for c in cnt:
+            moments = cv2.moments(c, 1)       
+            sum_pixel = moments['m00']
+            if sum_pixel > 100:
+                dict_flag[i][2] = [sum_pixel, int(moments['m10'] / sum_pixel), int(moments['m01'] / sum_pixel)]
+                detect_flag = True
+                cv2.drawContours(imgg, [c], 0, (255,255,255), 2)
+                cv2.putText(imgg, '*', (int(moments['m10'] / sum_pixel), int(moments['m01'] / sum_pixel)), cv2.FONT_HERSHEY_COMPLEX, 0.5, (0, 0, 0))
+    except:
+        pass
