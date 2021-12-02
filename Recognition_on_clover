@@ -1,0 +1,30 @@
+import cv2
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+=
+rospy.init_node('computer_vision_sample')
+bridge CvBridge().
+image_pub = rospy. Publisher("~debug', Image, queue_size=1000)
+rate = rospy.Rate(10)
+=
+def color():
+global img
+img bridge.imgmsg_to_cv2(rospy.wait_for_message('main_camera/image_raw', Image), 'bgr8')
+img img[130:140,180:190]
+#print(img)
+print("IMIT/")
+img_hsv = cv2.cvtColor (img, cv2.COLOR_BGR2HSV)
+#print(img_hsv)
+h,s,v, k = 0,0,0,0
+for i in img_hsv:
+h+=i[0] [O]
+S+=i[O] [1]
+v+=i[@] [2]
+k+=1
+print("h = {}, s = {}, v = {}". formatch/k, s/k, v/k))
+print("/ITTIIIIIIIIIII/")
+image_pub.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
+rate.sleep()
+while True:
+color()
+#rospy.spin()
