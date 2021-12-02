@@ -1,0 +1,30 @@
+import rospy
+import cv2
+import random
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+from pyzbar import pyzbar
+
+rospy.init_node('qr_detect')
+bridge = CvBridge()
+image_pub = rospy.Publisher('~debug', Image, queue_size=1000)
+
+def qr_detect():
+    #img = bridge.imgmsg_to_cv2(rospy.wait_for_message('main_camera/image_raw', Image), 'bgr8')[110: 210, 70: 170]
+    #img = cv2.imread("/home/clover/Desktop/Qr.png") 
+    
+    barcodes = pyzbar.decode(img)
+    print(barcodes)
+    try:
+        for barcode in barcodes:
+            b_data = barcode.data.decode("utf-8")
+            b_type = barcode.type
+            (x, y, w, h) = barcode.rect
+            xc = x + w/2
+            yc = y + h/2
+            print("Found {} with data {} with center at x={}, y={}".format(b_type, b_data, xc, yc))
+    except: pass
+    #image_pub.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
+    #cv2.imwrite("/home/clover/image{0}.png".format(random.randint(0,1000)), img)
+#while True:
+qr_detect()
